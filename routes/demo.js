@@ -78,6 +78,7 @@ router.post("/login", async function (req, res) {
   }
 
   console.log("Success");
+  res.redirect('/admin');
 });
 
 router.get("/admin", function (req, res) {

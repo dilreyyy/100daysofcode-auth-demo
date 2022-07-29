@@ -77,8 +77,12 @@ router.post("/login", async function (req, res) {
     return res.redirect("/login");
   }
 
-  console.log("Success");
-  res.redirect('/admin');
+  req.session.user = { id: emailFound._id, email: emailFound.email }
+  req.session.isAuthenticated = true;
+  req.session.save(function(){
+    console.log("Success");
+    res.redirect('/admin');
+  });
 });
 
 router.get("/admin", function (req, res) {

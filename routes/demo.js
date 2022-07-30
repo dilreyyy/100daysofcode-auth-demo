@@ -10,7 +10,20 @@ router.get("/", function (req, res) {
 });
 
 router.get("/signup", function (req, res) {
-  res.render("signup");
+  let sessionSignupInfo = req.session.signupInfo;
+
+  if ( !sessionSignupInfo ) { //check if signupinfo session is not create - means valid signup data
+      sessionSignupInfo = {
+        hasError: false,
+        message: '',
+        email: '',
+        confirmEmail: '',
+        password: ''
+      }
+  }
+
+  req.session.signupInfo = null;
+  res.render("signup", {inputData: sessionSignupInfo});
 });
 
 router.get("/login", function (req, res) {
@@ -22,7 +35,7 @@ router.post("/signup", async function (req, res) {
   const email = userData.email;
   const confirmEmail = userData["confirm-email"];
   const password = userData.password;
-  // console.log(password.trim().length);
+
   if (
     !email ||
     !confirmEmail ||
@@ -31,10 +44,22 @@ router.post("/signup", async function (req, res) {
     email !== confirmEmail ||
     !email.includes("@")
   ) {
-    console.log("Invalid data");
-    return res.redirect("/signup");
-  }
+    // console.log("Invalid data");
+    
+    req.session.signupInfo = {
+      hasError: true,
+      message: 'Invalid data - please try again',
+      email: email,
+      confirmEmail: confirmEmail,
+      password: password
+    }
 
+    req.session.save(function (){
+      res.redirect("/signup");
+    });
+    return; //return so that code below does not execute
+  }
+  
   const emailExisting = await db
     .getDb()
     .collection("users")

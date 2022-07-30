@@ -2,6 +2,7 @@ const express = require("express");
 const encrypt = require("bcryptjs");
 
 const db = require("../data/database");
+const { ObjectId } = require("mongodb");
 
 const router = express.Router();
 
@@ -106,17 +107,32 @@ router.post("/login", async function (req, res) {
   req.session.isAuthenticated = true;
   req.session.save(function(){
     console.log("Success");
-    res.redirect('/admin');
+    res.redirect('/profile');
   });
 });
 
-router.get("/admin", function (req, res) {
+router.get("/admin", async function (req, res) {
 
   if ( !req.session.isAuthenticated ) {
     return res.status(401).render('401');
   }
 
+  const userType = await db.getDb().collection('users').findOne({_id: ObjectId(req.session.user.id)});
+
+  if ( !userType || !userType.isAdmin ) {
+    return res.status(403).render('403');
+  }
+
   res.render("admin");
+});
+
+router.get("/profile", async function (req, res) {
+
+  if ( !req.session.isAuthenticated ) {
+    return res.status(401).render('401');
+  }
+
+  res.render("profile");
 });
 
 router.post("/logout", function (req, res) {

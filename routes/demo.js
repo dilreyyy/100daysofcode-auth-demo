@@ -10,6 +10,7 @@ router.get("/", function (req, res) {
   res.render("welcome");
 });
 
+//get SIGNUP ------------------------------------------------------
 router.get("/signup", function (req, res) {
   let sessionSignupInfo = req.session.signupInfo;
 
@@ -27,10 +28,23 @@ router.get("/signup", function (req, res) {
   res.render("signup", {inputData: sessionSignupInfo});
 });
 
+//get LOGIN ------------------------------------------------------
 router.get("/login", function (req, res) {
-  res.render("login");
+  let sessionSignupInfo = req.session.signupInfo;
+
+  if ( !sessionSignupInfo ) { //check if signupinfo session is not create - means valid signup data
+      sessionSignupInfo = {
+        hasError: false,
+        message: '',
+        email: '',
+        password: ''
+      }
+  }
+  req.session.signupInfo = null;
+  res.render("login", {inputData: sessionSignupInfo});
 });
 
+//post SIGNUP ------------------------------------------------------
 router.post("/signup", async function (req, res) {
   const userData = req.body;
   const email = userData.email;
@@ -68,7 +82,17 @@ router.post("/signup", async function (req, res) {
   
   if (emailExisting) {
     console.log("Email exists - try another one");
-    return res.redirect('/signup');
+    req.session.signupInfo = {
+      hasError: true,
+      message: 'Existing email - please use another email',
+      email: email,
+      confirmEmail: confirmEmail,
+      password: password
+    }
+    req.session.save(function (){
+      res.redirect('/signup');
+    })
+    return;
   }
 
   const encryptedPassword = await encrypt.hash(password, 12);
@@ -82,6 +106,7 @@ router.post("/signup", async function (req, res) {
   res.redirect("/login");
 });
 
+//post LOGIN ------------------------------------------------------
 router.post("/login", async function (req, res) {
   const userData = req.body;
   const email = userData.email;
@@ -94,13 +119,32 @@ router.post("/login", async function (req, res) {
 
   if (!emailFound) {
     console.log("Email does not match in our database!");
-    return res.redirect("/login");
+    req.session.signupInfo = {
+      hasError: true,
+      message: 'Invalid credentials - please try again',
+      email: email,
+      password: password
+    }
+    req.session.save(function (){
+      res.redirect("/login");
+    });
+    return 
   }
+
   const passwordFound = await encrypt.compare(password, emailFound.password);
 
   if (!passwordFound) {
     console.log("Password is incorrect!");
-    return res.redirect("/login");
+    req.session.signupInfo = {
+      hasError: true,
+      message: 'Invalid credentials - please try again',
+      email: email,
+      password: password
+    }
+    req.session.save(function (){
+      res.redirect("/login");
+    });
+    return;
   }
 
   req.session.user = { id: emailFound._id, email: emailFound.email }
@@ -111,6 +155,8 @@ router.post("/login", async function (req, res) {
   });
 });
 
+
+//get ADMIN ------------------------------------------------------
 router.get("/admin", async function (req, res) {
 
   if ( !req.session.isAuthenticated ) {
@@ -126,6 +172,7 @@ router.get("/admin", async function (req, res) {
   res.render("admin");
 });
 
+//get PROFILE ------------------------------------------------------
 router.get("/profile", async function (req, res) {
 
   if ( !req.session.isAuthenticated ) {
@@ -135,6 +182,7 @@ router.get("/profile", async function (req, res) {
   res.render("profile");
 });
 
+//post LOGOUT ------------------------------------------------------
 router.post("/logout", function (req, res) {
   req.session.user = null;
   req.session.isAuthenticated = false;

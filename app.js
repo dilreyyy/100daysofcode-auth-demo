@@ -32,6 +32,22 @@ app.use(session({
   store: sessionStore
 }));
 
+app.use(async function (req, res, next){ //custom middleware
+  const user = req.session.user;
+  const isAuth = req.session.isAuthenticated;
+
+  if ( !user || !isAuth) {
+    return next();
+  }
+
+  const userDoc = await db.getDb().collection('users').findOne({_id: user.id});
+  const userType = userDoc.isAdmin;
+
+  res.locals.isAuth = isAuth;
+  res.locals.isAdmin = userType;
+
+  next();
+})
 
 app.use(demoRoutes);
 
